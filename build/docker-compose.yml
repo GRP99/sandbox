@@ -1,0 +1,64 @@
+services:
+  mongo:
+    image: mongo:latest
+    hostname: mongo
+    container_name: mongo
+    restart: always
+    ports:
+      - "27017:27017"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.24
+    hostname: elasticsearch
+    container_name: elasticsearch
+    environment:
+      - transport.host=localhost
+      - network.host=0.0.0.0
+      - "ES_JAVA_OPTS=-Dlog4j2.formatMsgNoLookups=true -Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  graylog:
+    image: graylog/graylog:4.2
+    hostname: graylog
+    container_name: graylog
+    environment:
+      # CHANGE ME (must be at least 16 characters)!
+      - GRAYLOG_PASSWORD_SECRET=Htx3_QDsid8eX!TL__GGTk*FCk8aBJ-rBeibKggA.Pks6obuq.CoK*47RAZdHM@!
+      # Password: admin
+      - GRAYLOG_ROOT_PASSWORD_SHA2=8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
+      - GRAYLOG_HTTP_EXTERNAL_URI=http://127.0.0.1:9000/
+      - GRAYLOG_ELASTICSEARCH_VERSION=7
+      - GRAYLOG_CONTENT_PACKS_LOADER_ENABLED=true
+      - GRAYLOG_CONTENT_PACKS_DIR=data/contentpacks
+      - GRAYLOG_CONTENT_PACKS_AUTO_INSTALL=gelf-tcp-input-graylog.json
+    volumes:
+      - ./services/graylog/gelf-tcp-input-graylog.json:/usr/share/graylog/data/contentpacks/gelf-tcp-input-graylog.json
+    entrypoint: /usr/bin/tini -- wait-for-it elasticsearch:9200 --  /docker-entrypoint.sh
+    restart: always
+    depends_on:
+      - mongo
+      - elasticsearch
+    ports:
+      - "9000:9000"
+
+  sandbox:
+    image: ghcr.io/projects/sandbox/sandbox-service:1.0.0-r202410061042
+    hostname: sandbox
+    container_name: sandbox
+    depends_on:
+      - mongo
+    environment:
+      - quarkus.log.handler.gelf.host=tcp:graylog
+      - quarkus.log.handler.gelf.port=12201
+      - config.db.connection-string=mongodb://mongo:27017
+      - quarkus.swagger-ui.always-include=true
+    ports:
+      - "8080:8080"
+

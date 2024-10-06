@@ -1,0 +1,4 @@
+config:
+  db:
+# IMPORTANT: The following variables are mandatory. Please remove the comment markers and provide valid values.
+#    connection-string: "mongodb://localhost:27017"

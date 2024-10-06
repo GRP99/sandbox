@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.projects</groupId>
+        <artifactId>sandbox</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>sandbox-quarkus-docker</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-core-deployment</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.projects</groupId>
+            <artifactId>sandbox-api</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-openapi</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-logging-gelf</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <extensions>true</extensions>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>generate-code</goal>
+                            <goal>generate-code-tests</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>docker</id>
+            <dependencies>
+                <dependency>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-container-image-docker</artifactId>
+                    <scope>runtime</scope>
+                </dependency>
+                <dependency>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-container-image-docker-deployment</artifactId>
+                    <scope>runtime</scope>
+                </dependency>
+            </dependencies>
+
+            <properties>
+                <maven.build.timestamp.format>yyyyMMddHHmm</maven.build.timestamp.format>
+                <!--suppress UnresolvedMavenProperty -->
+                <quarkus.docker.build-args.VERSION>
+                    ${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}
+                </quarkus.docker.build-args.VERSION>
+                <quarkus.docker.build-args.REVISION>r${maven.build.timestamp}</quarkus.docker.build-args.REVISION>
+                <quarkus.container-image.push>false</quarkus.container-image.push>
+                <quarkus.container-image.tag>
+                    ${quarkus.docker.build-args.VERSION}-${quarkus.docker.build-args.REVISION}
+                </quarkus.container-image.tag>
+
+                <quarkus.container-image.group>projects/sandbox</quarkus.container-image.group>
+                <quarkus.container-image.name>sandbox-service</quarkus.container-image.name>
+                <quarkus.container-image.builder>docker</quarkus.container-image.builder>
+                <quarkus.container-image.registry>ghcr.io</quarkus.container-image.registry>
+                <quarkus.container-image.build>true</quarkus.container-image.build>
+            </properties>
+
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <version>${build-helper-maven-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <phase>validate</phase>
+                                <id>parse-version</id>
+                                <goals>
+                                    <goal>parse-version</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>docker-created-property</id>
+                                <phase>validate</phase>
+                                <configuration>
+                                    <name>quarkus.docker.build-args.CREATED</name>
+                                    <pattern>yyyy-MM-dd'T'HH:mm:ssXXX</pattern>
+                                </configuration>
+                                <goals>
+                                    <goal>timestamp-property</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-enforcer-plugin</artifactId>
+                        <version>${maven-enforcer-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>check-required-docker-properties</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>enforce</goal>
+                                </goals>
+                                <configuration>
+                                    <rules>
+                                        <!-- required properties -->
+                                        <requireProperty>
+                                            <property>quarkus.container-image.tag</property>
+                                            <message>Missing property: "quarkus.container-image.tag"</message>
+                                        </requireProperty>
+                                    </rules>
+                                    <fail>true</fail>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

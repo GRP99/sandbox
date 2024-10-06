@@ -1,0 +1,15 @@
+quarkus:
+  log:
+    console:
+      enable: false
+    handler:
+      gelf:
+        enabled: true
+        additional-field:
+          service:
+            value: SANDBOX_API
+          application:
+            value: SANDBOX
+# IMPORTANT: The following variables are mandatory. Please remove the comment markers and provide valid values.
+#        host: localhost
+#        port: 12201
